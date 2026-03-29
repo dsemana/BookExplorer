@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Book Explorer</title>
+  <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:      #f5f2ed;
+      --ink:     #18180f;
+      --dim:     #888880;
+      --rule:    #d8d4cc;
+      --accent:  #2a2a1e;
+      --hover:   #edeae4;
+      --serif:   'EB Garamond', Georgia, serif;
+      --mono:    'DM Mono', monospace;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--ink);
+      font-family: var(--serif);
+      font-size: 17px;
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    /* ── layout ── */
+    .page {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 0 24px 80px;
+    }
+
+    /* ── header ── */
+    header {
+      padding: 48px 0 28px;
+      border-bottom: 1px solid var(--rule);
+      margin-bottom: 36px;
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .site-name {
+      font-size: 22px;
+      font-weight: 500;
+      letter-spacing: 0.01em;
+    }
+
+    .site-source {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--dim);
+      letter-spacing: 0.12em;
+    }
+
+    /* ── tabs ── */
+    .tabs {
+      display: flex;
+      gap: 0;
+      margin-bottom: 20px;
+      border-bottom: 1px solid var(--rule);
+    }
+
+    .tab {
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--dim);
+      padding: 10px 18px 10px 0;
+      cursor: pointer;
+      border: none;
+      background: none;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+      transition: color 0.15s, border-color 0.15s;
+    }
+
+    .tab:hover { color: var(--ink); }
+
+    .tab.active {
+      color: var(--ink);
+      border-bottom-color: var(--ink);
+    }
+
+    /* ── search bar ── */
+    .search-row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 36px;
+    }
+
+    .search-input {
+      flex: 1;
+      font-family: var(--serif);
+      font-size: 17px;
+      background: none;
+      border: none;
+      border-bottom: 1px solid var(--rule);
+      padding: 10px 0;
+      color: var(--ink);
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .search-input::placeholder { color: var(--dim); font-style: italic; }
+    .search-input:focus { border-bottom-color: var(--ink); }
+
+    .search-btn {
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      background: var(--ink);
+      color: var(--bg);
+      border: none;
+      padding: 10px 18px;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+
+    .search-btn:hover:not(:disabled) { opacity: 0.75; }
+    .search-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+    /* ── status ── */
+    .status {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--dim);
+      letter-spacing: 0.08em;
+      margin-bottom: 24px;
+      min-height: 16px;
+    }
+
+    .status.error { color: #a04030; }
+
+    /* ── results ── */
+    .results { display: flex; flex-direction: column; }
+
+    .result-item {
+      padding: 18px 0;
+      border-bottom: 1px solid var(--rule);
+      cursor: pointer;
+      transition: background 0.1s;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+      align-items: start;
+    }
+
+    .result-item:hover { background: var(--hover); margin: 0 -12px; padding: 18px 12px; }
+
+    .result-title {
+      font-size: 18px;
+      font-weight: 500;
+      line-height: 1.3;
+      margin-bottom: 4px;
+    }
+
+    .result-meta {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--dim);
+      letter-spacing: 0.06em;
+      line-height: 1.7;
+    }
+
+    .result-year {
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--dim);
+      white-space: nowrap;
+      padding-top: 3px;
+    }
+
+    /* ── cover thumbnail ── */
+    .cover-thumb {
+      width: 38px;
+      height: 54px;
+      object-fit: cover;
+      border: 1px solid var(--rule);
+      flex-shrink: 0;
+      display: block;
+    }
+
+    .cover-placeholder {
+      width: 38px;
+      height: 54px;
+      background: var(--rule);
+      flex-shrink: 0;
+    }
+
+    /* ── detail panel ── */
+    .detail {
+      animation: fadeUp 0.25s ease;
+    }
+
+    .detail-back {
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--dim);
+      cursor: pointer;
+      border: none;
+      background: none;
+      padding: 0;
+      margin-bottom: 32px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: color 0.15s;
+    }
+
+    .detail-back:hover { color: var(--ink); }
+
+    .detail-top {
+      display: flex;
+      gap: 20px;
+      margin-bottom: 28px;
+      align-items: flex-start;
+    }
+
+    .detail-cover {
+      width: 80px;
+      height: 114px;
+      object-fit: cover;
+      border: 1px solid var(--rule);
+      flex-shrink: 0;
+    }
+
+    .detail-cover-placeholder {
+      width: 80px;
+      height: 114px;
+      background: var(--rule);
+      flex-shrink: 0;
+    }
+
+    .detail-title {
+      font-size: clamp(22px, 4vw, 30px);
+      font-weight: 500;
+      line-height: 1.2;
+      margin-bottom: 8px;
+      font-style: italic;
+    }
+
+    .detail-authors {
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--dim);
+      letter-spacing: 0.06em;
+      margin-bottom: 6px;
+    }
+
+    .detail-badge {
+      display: inline-block;
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      border: 1px solid var(--rule);
+      padding: 2px 8px;
+      margin-right: 6px;
+      color: var(--dim);
+    }
+
+    .section-label {
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--dim);
+      margin: 28px 0 10px;
+      border-top: 1px solid var(--rule);
+      padding-top: 16px;
+    }
+
+    .detail-desc {
+      font-size: 16px;
+      line-height: 1.75;
+      color: #333328;
+    }
+
+    .subject-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+
+    .subject-tag {
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 0.08em;
+      border: 1px solid var(--rule);
+      padding: 3px 10px;
+      color: var(--dim);
+      cursor: pointer;
+      transition: all 0.12s;
+    }
+
+    .subject-tag:hover {
+      background: var(--ink);
+      color: var(--bg);
+      border-color: var(--ink);
+    }
+
+    .works-list { display: flex; flex-direction: column; gap: 10px; }
+
+    .work-item { display: flex; justify-content: space-between; }
+
+    .work-title { font-size: 16px; }
+
+    .work-year {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--dim);
+    }
+
+    /* ── empty state ── */
+    .empty {
+      padding: 60px 0;
+      text-align: center;
+      color: var(--dim);
+    }
+
+    .empty p:first-child {
+      font-size: 28px;
+      font-style: italic;
+      margin-bottom: 8px;
+      color: var(--rule);
+    }
+
+    .empty p:last-child {
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 0.08em;
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    @media (max-width: 520px) {
+      .search-btn { padding: 10px 12px; }
+      .detail-top { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <header>
+    <span class="site-name">Book Explorer</span>
+    <span class="site-source">via Open Library</span>
+  </header>
+
+  <div class="tabs">
+    <button class="tab active" data-tab="books">Books</button>
+    <button class="tab" data-tab="authors">Authors</button>
+    <button class="tab" data-tab="subject">Subject</button>
+  </div>
+
+  <div class="search-row">
+    <input id="searchInput" class="search-input" type="text" placeholder="Search…" autocomplete="off"/>
+    <button id="searchBtn" class="search-btn" onclick="doSearch()">Search</button>
+  </div>
+
+  <div id="status" class="status"></div>
+  <div id="content">
+    <div class="empty">
+      <p>Open a book.</p>
+      <p>search for any title, author, or subject above</p>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  let activeTab = 'books';
+  let lastResults = [];
+
+  // tab switching
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      activeTab = tab.dataset.tab;
+      updatePlaceholder();
+      clearResults();
+    });
+  });
+
+  document.getElementById('searchInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') doSearch();
+  });
+
+  function updatePlaceholder() {
+    const ph = { books: 'Search books…', authors: 'Search authors…', subject: 'e.g. philosophy, history, python…' };
+    document.getElementById('searchInput').placeholder = ph[activeTab] || 'Search…';
+  }
+
+  function setStatus(msg, isError = false) {
+    const el = document.getElementById('status');
+    el.textContent = msg;
+    el.className = 'status' + (isError ? ' error' : '');
+  }
+
+  function clearResults() {
+    document.getElementById('content').innerHTML = '';
+    setStatus('');
+  }
+
+  function coverImg(coverId, size = 'M', cssClass = 'cover-thumb') {
+    if (!coverId) return `<div class="${cssClass.replace('cover-thumb','cover-placeholder').replace('detail-cover','detail-cover-placeholder')}"></div>`;
+    return `<img class="${cssClass}" src="https://covers.openlibrary.org/b/id/${coverId}-${size}.jpg" alt="cover" onerror="this.style.display='none'"/>`;
+  }
+
+  async function doSearch() {
+    const q = document.getElementById('searchInput').value.trim();
+    if (!q) return;
+
+    document.getElementById('searchBtn').disabled = true;
+    setStatus('searching…');
+    document.getElementById('content').innerHTML = '';
+
+    try {
+      const url = `/api/search/${activeTab}?q=${encodeURIComponent(q)}`;
+      const res  = await fetch(url);
+      const data = await res.json();
+
+      if (data.error) { setStatus(data.error, true); return; }
+
+      if (activeTab === 'books')   renderBooks(data);
+      if (activeTab === 'authors') renderAuthors(data);
+      if (activeTab === 'subject') renderSubject(data);
+
+    } catch {
+      setStatus('something went wrong', true);
+    } finally {
+      document.getElementById('searchBtn').disabled = false;
+    }
+  }
+
+  // ── render books ──
+
+  function renderBooks(data) {
+    const books = data.results || [];
+    lastResults = books;
+
+    if (!books.length) { setStatus('no results'); return; }
+    setStatus(`${data.total?.toLocaleString() || books.length} results`);
+
+    const html = books.map((b, i) => `
+      <div class="result-item" onclick="showBookDetail(${i})">
+        <div>
+          <div class="result-title">${b.title}</div>
+          <div class="result-meta">
+            ${b.authors.join(', ') || 'Unknown author'}
+            ${b.pages ? ' · ' + b.pages + ' pp' : ''}
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+          <span class="result-year">${b.year || '—'}</span>
+          ${coverImg(b.cover_id, 'S')}
+        </div>
+      </div>`).join('');
+
+    document.getElementById('content').innerHTML = `<div class="results">${html}</div>`;
+  }
+
+  async function showBookDetail(idx) {
+    const book = lastResults[idx];
+    const workId = book.key?.replace('/works/', '');
+    if (!workId) return;
+
+    setStatus('loading…');
+    const res  = await fetch(`/api/book/${workId}`);
+    const data = await res.json();
+    setStatus('');
+
+    const subjects = (data.subjects || []).map(s =>
+      `<span class="subject-tag" onclick="searchSubject('${s.replace(/'/g,"\\'")}')"> ${s}</span>`
+    ).join('');
+
+    document.getElementById('content').innerHTML = `
+      <div class="detail">
+        <button class="detail-back" onclick="renderBooks({results: lastResults, total: lastResults.length})">← back</button>
+        <div class="detail-top">
+          ${coverImg(book.cover_id, 'M', 'detail-cover')}
+          <div>
+            <div class="detail-title">${book.title}</div>
+            <div class="detail-authors">${book.authors.join(', ') || '—'}</div>
+            ${book.year  ? `<span class="detail-badge">${book.year}</span>` : ''}
+            ${book.pages ? `<span class="detail-badge">${book.pages} pp</span>` : ''}
+          </div>
+        </div>
+
+        ${data.description ? `
+          <div class="section-label">About</div>
+          <div class="detail-desc">${data.description}</div>` : ''}
+
+        ${subjects ? `
+          <div class="section-label">Subjects</div>
+          <div class="subject-tags">${subjects}</div>` : ''}
+      </div>`;
+  }
+
+  // ── render authors ──
+
+  function renderAuthors(data) {
+    const authors = data.results || [];
+    lastResults = authors;
+
+    if (!authors.length) { setStatus('no authors found'); return; }
+    setStatus(`${authors.length} authors`);
+
+    const html = authors.map((a, i) => `
+      <div class="result-item" onclick="showAuthorDetail(${i})">
+        <div>
+          <div class="result-title">${a.name}</div>
+          <div class="result-meta">
+            ${a.birth_date ? 'b. ' + a.birth_date : ''}
+            ${a.work_count ? ' · ' + a.work_count + ' works' : ''}
+            ${a.top_work   ? '<br>' + a.top_work : ''}
+          </div>
+        </div>
+      </div>`).join('');
+
+    document.getElementById('content').innerHTML = `<div class="results">${html}</div>`;
+  }
+
+  async function showAuthorDetail(idx) {
+    const author = lastResults[idx];
+    const key = author.key;
+    if (!key) return;
+
+    setStatus('loading…');
+    const res  = await fetch(`/api/author/${key}`);
+    const data = await res.json();
+    setStatus('');
+
+    const works = (data.works || []).map(w => `
+      <div class="work-item">
+        <span class="work-title">${w.title}</span>
+        <span class="work-year">${w.year || ''}</span>
+      </div>`).join('');
+
+    document.getElementById('content').innerHTML = `
+      <div class="detail">
+        <button class="detail-back" onclick="renderAuthors({results: lastResults})">← back</button>
+        <div class="detail-title">${data.name}</div>
+        <div class="detail-authors">
+          ${data.birth_date ? 'b. ' + data.birth_date : ''}
+          ${data.death_date ? '  d. ' + data.death_date : ''}
+        </div>
+
+        ${data.bio ? `
+          <div class="section-label">About</div>
+          <div class="detail-desc">${data.bio}</div>` : ''}
+
+        ${works ? `
+          <div class="section-label">Works</div>
+          <div class="works-list">${works}</div>` : ''}
+      </div>`;
+  }
+
+  // ── render subject ──
+
+  function renderSubject(data) {
+    const books = data.results || [];
+    lastResults = books;
+
+    if (!books.length) { setStatus('no books found for that subject'); return; }
+    setStatus(`${data.name} · ${data.work_count?.toLocaleString() || ''} works total`);
+
+    const html = books.map((b, i) => `
+      <div class="result-item">
+        <div>
+          <div class="result-title">${b.title}</div>
+          <div class="result-meta">${b.authors.join(', ') || '—'}</div>
+        </div>
+        ${coverImg(b.cover_id, 'S')}
+      </div>`).join('');
+
+    document.getElementById('content').innerHTML = `<div class="results">${html}</div>`;
+  }
+
+  function searchSubject(s) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelector('[data-tab="subject"]').classList.add('active');
+    activeTab = 'subject';
+    updatePlaceholder();
+    document.getElementById('searchInput').value = s;
+    doSearch();
+  }
+</script>
+</body>
+</html>
