@@ -1,3 +1,7 @@
+# Book Explorer - built by Divin
+# uses OpenLibrary API - no key needed which is safe
+# started this project for the ALU Web Infrastracture assignment
+
 import requests
 from flask import Flask, render_template, request, jsonify
 
